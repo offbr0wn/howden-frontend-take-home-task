@@ -1,101 +1,213 @@
-import Image from "next/image";
+"use client";
+// Form page
+// If user has data set in local store
+// Then redirect to table pages
+// If not then allow user to enter into form
+// Submit form and save data into local store
+// If user tries to access form page with data in local store then redirect to table page
 
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+export type DataCarStore = {
+  carOwner: string | undefined;
+  numberPlate?: string;
+  wantedCarMake?: string;
+};
+const wantedCarMake = [
+  "Volkswagen",
+  "Ford",
+  "Toyota",
+  "BMW",
+  "Mercedes",
+  "Honda",
+  "Chevrolet",
+  "Nissan",
+  "Kia",
+  "Jaguar",
+  "Fiat",
+  "Volvo",
+  "Mazda",
+  "Hyundai",
+] as const;
 export default function Home() {
+  const router = useRouter();
+
+  // Checks to see if user has data in local store, if there is redirects to results page
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedData = localStorage.getItem("carOwner");
+      if (savedData) {
+        router.push("/results");
+      }
+    }
+  }, [router]);
+
+  //  Validation schema for the form
+
+  const formSchema = z
+    .object({
+      carOwner: z.enum(["Yes", "No"]),
+      numberPlate: z
+        .string()
+        .length(6, "Number plate must be 6 characters long")
+        .optional(),
+      wantedCarMake: z.enum(wantedCarMake).optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (data.carOwner === "No" && !data.wantedCarMake) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["wantedCarMake"],
+        });
+      }
+
+      if (data.carOwner === "Yes" && !data.numberPlate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["numberPlate"],
+        });
+      }
+    });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    mode: "onBlur",
+    resolver: zodResolver(formSchema),
+  });
+
+  const carOwner = form?.watch("carOwner");
+  const onSubmit = (data: z.infer<typeof formSchema>) => {
+    let dataCarStore;
+
+    if (data?.carOwner === "No") {
+      dataCarStore = {
+        carOwner: data?.carOwner,
+        wantedCarMake: data?.wantedCarMake,
+      };
+    }
+
+    if (data?.carOwner === "Yes") {
+      dataCarStore = {
+        carOwner: data?.carOwner,
+        numberPlate: data?.numberPlate,
+      };
+    }
+    //  Depending on what value selects from fields wil be assigned to the variable and stored in local storage
+    // Then redirects user to results page
+    localStorage?.setItem("carOwner", JSON.stringify(dataCarStore));
+    router.push("/results");
+  };
+
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            {/* Dropdown for car owner */}
+            <FormField
+              control={form.control}
+              name="carOwner"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Do you own a car?</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl className="w-[200px] ">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-black ">
+                      <SelectItem value="Yes">Yes</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+                  <FormMessage className="text-red-500" />
+                </FormItem>
+              )}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+
+            {/* Dropdown for wanted car make */}
+            {carOwner === "No" && (
+              <FormField
+                control={form.control}
+                name="wantedCarMake"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>What car make would you like to own?</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl className="w-[200px] ">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-black ">
+                        {wantedCarMake.map((make: string, index: number) => (
+                          <SelectItem key={index} value={make}>
+                            {make}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            )}
+            {/* Input field for number plate */}
+            {carOwner === "Yes" && (
+              <FormField
+                control={form.control}
+                name="numberPlate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enter your car number plate?</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter your car number plate"
+                        {...field}
+                      />
+                    </FormControl>
+
+                    <FormMessage className="text-red-500" />
+                  </FormItem>
+                )}
+              />
+            )}
+            <Button type="submit" className="bg-white text-black">
+              Submit
+            </Button>
+          </form>
+        </Form>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
