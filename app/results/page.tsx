@@ -17,11 +17,11 @@ import {
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { DataCarStore } from "../page";
 
 export default function Results() {
-  const [carOwner, setCarOwner] = React.useState<DataCarStore>();
+  const [carOwner, setCarOwner] = useState<DataCarStore>();
   const router = useRouter();
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function Results() {
           className="mt-4 w-full cursor-pointer bg-white text-black"
           onClick={clearStorage}
         >
-          Amend/Remove data
+          Remove data
         </Button>
       </main>
     </div>
