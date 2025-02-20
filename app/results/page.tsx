@@ -23,16 +23,18 @@ import { DataCarStore } from "../page";
 export default function Results() {
   const [carOwner, setCarOwner] = React.useState<DataCarStore>();
   const router = useRouter();
-  const storedData = localStorage.getItem("carOwner");
 
   useEffect(() => {
-    if (storedData) {
-      setCarOwner(JSON.parse(storedData));
-      return;
-    } else {
-      router.push("/");
+    if (typeof window !== "undefined") {
+      const storedData = localStorage.getItem("carOwner");
+      if (storedData) {
+        setCarOwner(JSON.parse(storedData));
+        return;
+      } else {
+        router.push("/");
+      }
     }
-  }, [router, storedData]);
+  }, [router]);
   const clearStorage = () => {
     localStorage.removeItem("carOwner");
     router.push("/");
